@@ -11,10 +11,20 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+import environ
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
+env = environ.Env(
+    DEBUG=(bool, False),
+    ALLOWED_HOSTS=(eval),
+    CORS_ALLOWED_ORIGINS=(eval),
+    CORS_ALLOW_ALL_ORIGINS=(bool, False),
+    CORS_ALLOW_CREDENTIALS=(bool, False),
+)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -23,11 +33,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-jp@*+v$%@ug!)^mue-cq9bua8y7kgqihq+5r^z=d$r+7ztwiwe'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG")
+print(f"{DEBUG= }")
+ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+print(f"{ALLOWED_HOSTS= }")
 
-ALLOWED_HOSTS = []
+CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")  # → ["http://localhost:3000"]
+print(f"{CORS_ALLOWED_ORIGINS= }")
 
+CORS_ALLOW_ALL_ORIGINS = env("CORS_ALLOW_ALL_ORIGINS")  # → False
+print(f"{CORS_ALLOW_ALL_ORIGINS= }")
 
+CORS_ALLOW_CREDENTIALS = env("CORS_ALLOW_CREDENTIALS")  # → True or False as set in .env
+print(f"{CORS_ALLOW_CREDENTIALS= }")
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://example.com",
+    # add any other host you call from, eg "https://app.campused.ai"
+]
+
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:4200")
+print(f"{FRONTEND_URL= }")
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,7 +63,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "api.files_handling",
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'api.users',
+    'api.workspaces',
+    'api.workspace_tenant',
+    'api.files_handling',
 ]
 
 MIDDLEWARE = [
@@ -73,11 +104,9 @@ WSGI_APPLICATION = 'valture.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db("POSTGRESQL_URI"),
 }
 
 
@@ -116,3 +145,37 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Custom Authentication Configs
+AUTH_USER_MODEL = 'users.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'JWK_URL': None,
+    'LEEWAY': 0,
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    'JTI_CLAIM': 'jti',
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
