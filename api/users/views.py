@@ -32,7 +32,7 @@ class SignupView(APIView):
             send_mail(
                 subject="Verify your email - Valture",
                 message=f"Please verify your email by clicking the following link: {verify_url}",
-                from_email="noreply@valture.com",
+                from_email=settings.GMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
             )
