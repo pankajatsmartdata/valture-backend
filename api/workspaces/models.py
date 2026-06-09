@@ -12,7 +12,7 @@ class Workspace(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'workspaces'
+        db_table = 'workspace'
         verbose_name = 'Workspace'
         verbose_name_plural = 'Workspaces'
 
@@ -41,7 +41,7 @@ class UserWorkspaceMapping(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'user_workspace_mappings'
+        db_table = 'user_workspace_mapping'
         unique_together = ('user', 'workspace')
         verbose_name = 'User Workspace Mapping'
         verbose_name_plural = 'User Workspace Mappings'

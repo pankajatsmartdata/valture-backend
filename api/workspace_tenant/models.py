@@ -28,7 +28,7 @@ class WorkspaceMember(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'workspace_members'
+        db_table = 'workspace_member'
         unique_together = ('workspace', 'user')
         verbose_name = 'Workspace Member'
         verbose_name_plural = 'Workspace Members'
@@ -57,7 +57,7 @@ class WorkspaceInvitation(models.Model):
     is_accepted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'workspace_invitations'
+        db_table = 'workspace_invitation'
         unique_together = ('workspace', 'email')
         verbose_name = 'Workspace Invitation'
         verbose_name_plural = 'Workspace Invitations'
