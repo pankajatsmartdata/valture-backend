@@ -52,8 +52,16 @@ CSRF_TRUSTED_ORIGINS = [
     # add any other host you call from, eg "https://app.campused.ai"
 ]
 
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:4200")
-print(f"{FRONTEND_URL= }")
+GMAIL = env("GMAIL")
+GMAIL_PWD = env("GMAIL_PWD")
+
+# Gmail SMTP configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = GMAIL
+EMAIL_HOST_PASSWORD = GMAIL_PWD
 # Application definition
 
 INSTALLED_APPS = [
