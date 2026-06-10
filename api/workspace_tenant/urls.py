@@ -4,5 +4,5 @@ from .views import WorkspaceMemberListView, WorkspaceInviteView, WorkspaceJoinVi
 urlpatterns = [
     path('workspaces/<uuid:workspace_id>/members/', WorkspaceMemberListView.as_view(), name='workspace-members-list'),
     path('workspaces/<uuid:workspace_id>/invite/', WorkspaceInviteView.as_view(), name='workspace-invite'),
-    path('workspaces/join/', WorkspaceJoinView.as_view(), name='workspace-join'),
+    path('workspaces/<uuid:workspace_id>/join/', WorkspaceJoinView.as_view(), name='workspace-join'),
 ]

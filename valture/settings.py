@@ -52,8 +52,9 @@ CSRF_TRUSTED_ORIGINS = [
     # add any other host you call from, eg "https://app.campused.ai"
 ]
 
-GMAIL = env("GMAIL")
-GMAIL_PWD = env("GMAIL_PWD")
+GMAIL = env("GMAIL", default="")
+GMAIL_PWD = env("GMAIL_PWD", default="")
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 # Gmail SMTP configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -85,6 +86,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'api.workspaces.middleware.WorkspaceSchemaMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -185,5 +187,3 @@ SIMPLE_JWT = {
     'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
     'JTI_CLAIM': 'jti',
 }
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

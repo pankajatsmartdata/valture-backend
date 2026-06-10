@@ -5,8 +5,9 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import get_user_model
 from api.workspaces.models import Workspace, UserWorkspaceMapping
-from api.workspace_tenant.models import WorkspaceMember, WorkspaceInvitation
+from api.workspace_tenant.models import WorkspaceMember
 from api.workspaces.utils import generate_unique_slug, generate_unique_schema_name
+from api.workspaces.schema_manager import create_workspace_schema, set_search_path, reset_search_path
 
 User = get_user_model()
 
@@ -42,55 +43,40 @@ class UserSignupSerializer(serializers.ModelSerializer):
                 last_name=last_name
             )
 
-            # 2. Check for pending invitations
-            pending_invites = WorkspaceInvitation.objects.filter(email=email, is_accepted=False)
+            # 2. Create a workspace (either requested or default)
+            if not workspace_name:
+                name_part = first_name if first_name else email.split('@')[0]
+                workspace_name = f"{name_part.capitalize()}'s Workspace"
             
-            if pending_invites.exists():
-                # Join invited workspaces
-                for invite in pending_invites:
-                    # Create global mapping
-                    UserWorkspaceMapping.objects.get_or_create(
-                        user=user,
-                        workspace=invite.workspace,
-                        defaults={'role': invite.role}
-                    )
-                    # Create tenant membership
-                    WorkspaceMember.objects.get_or_create(
-                        workspace=invite.workspace,
-                        user=user,
-                        defaults={'email': email, 'role': invite.role}
-                    )
-                    invite.is_accepted = True
-                    invite.save()
-            else:
-                # 3. Create a workspace (either requested or default)
-                if not workspace_name:
-                    name_part = first_name if first_name else email.split('@')[0]
-                    workspace_name = f"{name_part.capitalize()}'s Workspace"
-                
-                slug = generate_unique_slug(workspace_name)
-                schema_name = generate_unique_schema_name(slug)
+            slug = generate_unique_slug(workspace_name)
+            schema_name = generate_unique_schema_name(slug)
 
-                workspace = Workspace.objects.create(
-                    name=workspace_name,
-                    slug=slug,
-                    schema_name=schema_name
-                )
+            workspace = Workspace.objects.create(
+                name=workspace_name,
+                slug=slug,
+                schema_name=schema_name
+            )
 
-                # Map user to workspace as owner globally
-                UserWorkspaceMapping.objects.create(
-                    user=user,
-                    workspace=workspace,
-                    role='owner'
-                )
+            # Map user to workspace as owner globally
+            UserWorkspaceMapping.objects.create(
+                user=user,
+                workspace=workspace,
+                role='owner'
+            )
 
-                # Map user as owner in workspace member table
+            # 3. Create the database schema and tables
+            create_workspace_schema(schema_name)
+
+            # 4. Map user as owner in workspace member table (inside the schema)
+            try:
+                set_search_path(schema_name)
                 WorkspaceMember.objects.create(
-                    workspace=workspace,
                     user=user,
                     email=email,
                     role='owner'
                 )
+            finally:
+                reset_search_path()
 
             return user
 

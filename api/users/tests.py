@@ -47,7 +47,12 @@ class AuthenticationTests(APITestCase):
 
         # Check mapping and member
         self.assertTrue(UserWorkspaceMapping.objects.filter(user=user, workspace=workspace, role='owner').exists())
-        self.assertTrue(WorkspaceMember.objects.filter(user=user, workspace=workspace, role='owner').exists())
+        from api.workspaces.schema_manager import set_search_path, reset_search_path
+        try:
+            set_search_path(workspace.schema_name)
+            self.assertTrue(WorkspaceMember.objects.filter(user=user, role='owner').exists())
+        finally:
+            reset_search_path()
 
         # Check email sent
         self.assertEqual(len(mail.outbox), 1)
@@ -229,7 +234,7 @@ class WorkspaceTenantTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token_b}')
 
         # Join the workspace
-        join_url = reverse('workspace-join')
+        join_url = reverse('workspace-join', kwargs={'workspace_id': self.workspace_a_id})
         join_response = self.client.post(join_url, {'token': token})
         self.assertEqual(join_response.status_code, status.HTTP_200_OK)
 
