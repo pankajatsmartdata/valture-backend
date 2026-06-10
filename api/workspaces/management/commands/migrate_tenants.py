@@ -1,0 +1,20 @@
+from django.core.management.base import BaseCommand
+from api.workspaces.models import Workspace
+from api.workspaces.schema_manager import run_migrations_on_schema
+
+class Command(BaseCommand):
+    help = 'Run SQL migrations across all workspace schemas.'
+
+    def handle(self, *args, **options):
+        workspaces = Workspace.objects.all()
+        self.stdout.write(f"Found {workspaces.count()} workspaces to migrate.")
+        
+        for ws in workspaces:
+            self.stdout.write(f"Migrating schema '{ws.schema_name}' for workspace '{ws.name}'...")
+            try:
+                run_migrations_on_schema(ws.schema_name)
+                self.stdout.write(self.style.SUCCESS(f"Successfully migrated schema '{ws.schema_name}'."))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Error migrating schema '{ws.schema_name}': {e}"))
+                
+        self.stdout.write(self.style.SUCCESS("All migrations completed successfully!"))
