@@ -1,3 +1,5 @@
+# /api/workspaces/management/commands/migrate_tenants.py
+
 from django.core.management.base import BaseCommand
 from api.workspaces.models import Workspace
 from api.workspaces.schema_manager import run_migrations_on_schema

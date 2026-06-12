@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS workspace_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id INTEGER NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     email VARCHAR(254) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'admin', 'member')),
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

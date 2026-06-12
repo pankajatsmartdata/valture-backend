@@ -1,3 +1,5 @@
+# api/workspaces/schema_manager.py
+
 import os
 import re
 from django.db import connection, transaction
