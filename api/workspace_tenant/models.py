@@ -1,3 +1,4 @@
+from email.policy import default
 import uuid
 from django.db import models
 from django.conf import settings
@@ -22,7 +23,7 @@ class WorkspaceMember(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'workspace_members'
         verbose_name = 'Workspace Member'
         verbose_name_plural = 'Workspace Members'
@@ -45,7 +46,7 @@ class WorkspaceInvitation(models.Model):
     is_accepted = models.BooleanField(default=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'workspace_invitations'
         verbose_name = 'Workspace Invitation'
         verbose_name_plural = 'Workspace Invitations'
