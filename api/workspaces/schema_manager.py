@@ -2,6 +2,7 @@
 
 import os
 import re
+import importlib
 from django.db import connection, transaction
 
 def validate_schema_name(schema_name):
@@ -30,44 +31,96 @@ def get_applied_migrations(schema_name):
         )
         return {row[0] for row in cursor.fetchall()}
 
-def run_migrations_on_schema(schema_name):
+def run_migrations_on_schema(schema_name, target_migration=None):
     validate_schema_name(schema_name)
     create_migration_tracker_table()
     
-    # 1. Get list of migrations already applied
+    # 1. Discover all available migrations in tenant_migrations folder
+    migrations_dir = os.path.join(os.path.dirname(__file__), 'tenant_migrations')
+    if not os.path.exists(migrations_dir):
+        return
+
+    # Find files like '0001_initial.py', excluding '__init__.py', 'operations.py', etc.
+    migration_files = sorted([
+        f for f in os.listdir(migrations_dir)
+        if f.endswith('.py') and re.match(r'^\d{4}_', f)
+    ])
+    
+    available_migrations = [f[:-3] for f in migration_files]
+    
+    # 2. Get currently applied migrations
     applied = get_applied_migrations(schema_name)
     
-    # 2. Locate the migrations folder
-    sql_dir = os.path.join(os.path.dirname(__file__), 'sql')
-    if not os.path.exists(sql_dir):
-        return
-        
-    migration_files = sorted([f for f in os.listdir(sql_dir) if f.endswith('.sql')])
-    
-    # 3. Apply unapplied migrations
-    for filename in migration_files:
-        if filename not in applied:
-            filepath = os.path.join(sql_dir, filename)
-            with open(filepath, 'r', encoding='utf-8') as f:
-                sql_content = f.read()
-                
-            # Execute migration atomically on the schema
+    # 3. Determine target list of migrations
+    if target_migration is not None:
+        target_migration = str(target_migration).strip()
+        if target_migration.lower() == 'zero':
+            target_index = -1
+        else:
+            target_index = -1
+            for idx, name in enumerate(available_migrations):
+                if name.startswith(target_migration):
+                    target_index = idx
+                    break
+            if target_index == -1:
+                raise ValueError(f"Target migration '{target_migration}' not found in available migrations.")
+    else:
+        # Default: run up to latest
+        target_index = len(available_migrations) - 1
+
+    # 4. Rollback applied migrations that are newer than target
+    for idx in range(len(available_migrations) - 1, target_index, -1):
+        name = available_migrations[idx]
+        if name in applied:
+            module = importlib.import_module(f"api.workspaces.tenant_migrations.{name}")
+            migration_cls = getattr(module, 'Migration', None)
+            if not migration_cls:
+                continue
+            
             try:
                 with transaction.atomic():
                     with connection.cursor() as cursor:
-                        # Route search path
                         cursor.execute(f"SET search_path TO {schema_name}, public;")
-                        # Execute SQL statements
-                        cursor.execute(sql_content)
-                        # Record migration
+                        # Run operations in reverse order for rollback
+                        for operation in reversed(migration_cls.operations):
+                            operation.database_backwards(schema_name, cursor)
+                        
+                        # Remove from tracker
                         cursor.execute(
-                            "INSERT INTO public.tenant_migrations (schema_name, migration_name) VALUES (%s, %s);",
-                            [schema_name, filename]
+                            "DELETE FROM public.tenant_migrations WHERE schema_name = %s AND migration_name = %s;",
+                            [schema_name, name]
                         )
             except Exception as e:
-                # Connection might be in failed transaction state, so trigger reset just in case
                 reset_search_path()
-                raise RuntimeError(f"Error applying SQL migration '{filename}' on schema '{schema_name}': {e}") from e
+                raise RuntimeError(f"Error rolling back migration '{name}' on schema '{schema_name}': {e}") from e
+            finally:
+                reset_search_path()
+
+    # 5. Apply unapplied migrations up to target
+    for idx in range(0, target_index + 1):
+        name = available_migrations[idx]
+        if name not in applied:
+            module = importlib.import_module(f"api.workspaces.tenant_migrations.{name}")
+            migration_cls = getattr(module, 'Migration', None)
+            if not migration_cls:
+                continue
+            
+            try:
+                with transaction.atomic():
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SET search_path TO {schema_name}, public;")
+                        # Run operations forwards
+                        for operation in migration_cls.operations:
+                            operation.database_forwards(schema_name, cursor)
+                        
+                        # Record in tracker
+                        cursor.execute(
+                            "INSERT INTO public.tenant_migrations (schema_name, migration_name) VALUES (%s, %s);",
+                            [schema_name, name]
+                        )
+            except Exception as e:
+                reset_search_path()
+                raise RuntimeError(f"Error applying migration '{name}' on schema '{schema_name}': {e}") from e
             finally:
                 reset_search_path()
 
@@ -95,3 +148,4 @@ def set_search_path(schema_name):
 def reset_search_path():
     with connection.cursor() as cursor:
         cursor.execute("SET search_path TO public;")
+
