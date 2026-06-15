@@ -109,7 +109,7 @@ Uses `CustomTokenObtainPairSerializer` (extends SimpleJWT). Payload:
 
 ---
 
-### 6. **Password Reset Request** – `POST /api/auth/password-reset/`
+### 6. **Password Reset Request** – `POST /api/auth/password-reset-request/`
 **Request Body**
 ```json
 { "email": "user@example.com" }
