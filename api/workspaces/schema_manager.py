@@ -16,12 +16,17 @@ def run_migrations_on_schema(schema_name, target_migration=None):
     
     _local.running_tenant_migration = True
     try:
-        # 1. Route to the tenant schema search path
-        set_search_path(schema_name)
+        # 1. Route to the tenant schema search path exclusively first
+        # so that ensure_schema() doesn't find public.django_migrations
+        with connection.cursor() as cursor:
+            cursor.execute(f"SET search_path TO {schema_name};")
         
         # 2. Ensure django_migrations table exists in this schema
         recorder = MigrationRecorder(connection)
         recorder.ensure_schema()
+        
+        # Now include public schema in the search path for remaining steps
+        set_search_path(schema_name)
         
         # 3. Synchronize public migrations to this tenant schema's tracker
         # so Django knows public-schema dependencies are already satisfied.
