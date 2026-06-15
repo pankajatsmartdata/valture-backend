@@ -18,5 +18,5 @@ urlpatterns = [
     path('auth/switch-workspace/', SwitchWorkspaceView.as_view(), name='auth-switch-workspace'),
     path('auth/password-reset-request/', PasswordResetRequestView.as_view(), name='auth-password-reset-request'),
     path('auth/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),
-    path('users/profile/', UserProfileView.as_view(), name='users-profile'),
+    path('auth/profile/', UserProfileView.as_view(), name='users-profile'),
 ]
