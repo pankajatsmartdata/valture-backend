@@ -58,6 +58,7 @@ class VerifyEmailView(APIView):
             user = User.objects.get(email=email)
             if not user.is_verified:
                 user.is_verified = True
+                user.is_active = True
                 user.save()
             return Response({"message": "Email verified successfully."}, status=status.HTTP_200_OK)
         except SignatureExpired:
